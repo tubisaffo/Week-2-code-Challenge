@@ -1,72 +1,67 @@
-import { useEffect, useState } from "react";
-// import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-// import Layout from './layouts/Layout';
-import BotCollection from "./pages/BotCollection";
-import ViewBot from "./components/ViewBot";
-import BotArmy from "./pages/BotArmy";
+import { useState, useEffect } from "react";
+import "./App.css";
+import Botcollection from "./components/BotCollection";
+import BotDetails from "./components/BotDetails";
+import { Routes, Route } from "react-router-dom";
+import BotArmy from "./components/BotArmy";
+import SortBar from "./components/SortBar"; // Import the SortBar component
 
 function App() {
   const [bots, setBots] = useState([]);
-  const [viewBot, setViewBot] = useState(null);
-
   const [army, setArmy] = useState([]);
-
-  function fetchBots() {
-    fetch("http://localhost:3001/bots", {
-      method: "GET",
-    })
-      .then((res) => res.json())
-      .then((bots) => setBots(bots));
-  }
+  const [deletion, setDelition] = useState([]);
 
   useEffect(() => {
-    fetchBots();
+    fetch("http://localhost:3000/bots")
+      .then((response) => response.json())
+      .then((data) => setBots(data))
+      .catch((error) => console.error("Error fetching bots:", error));
   }, []);
 
-  // console.log(viewBot)
+  const handleAddToArmy = (bot) => {
+    setArmy((prevArmy) => [...prevArmy, bot]);
+  };
 
-  function handleAddViewBot(doc) {
-    setViewBot(doc);
-    // console.log(doc, 'this is handleAddViewBot')
-  }
-
-  function removeViewBot() {
-    setViewBot(null);
-  }
-
-  function enlistBot(doc) {
-    for (let bot of army) {
-      if (bot.id === doc.id) return;
-    }
-    setArmy([doc, ...army]);
-    // console.log(army)
-  }
-
-  function removeFromArmy(doc) {
-    const botArmy = army.filter((bot) => (bot.id === doc.id ? false : true));
-    setArmy(botArmy);
-    // console.log(doc, 'removed from army')
+  const handleReleaseFromArmy = (bot) => {
+    setArmy((prevArmy) => prevArmy.filter((item) => item.id !== bot.id));
+  };
+  const deleteBot = (bot) => {
+    fetch(`http://localhost:3000/bots/${bot.id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => {
+        setArmy((prevBots) => prevBots.filter((item) => item.id !== bot.id));
+        setBots((prevBots) => prevBots.filter((item) => item.id !== bot.id));
+      })
+      .then((data) => console.log(data));
+  };
+  function sortBots(property) {
+    const sortedBots = bots.slice();
+    sortedBots.sort((a, b) => a[property] - b[property]);
+    setBots(sortedBots);
   }
 
   return (
-    <div>
-      <BotArmy army={army} removeFromArmy={removeFromArmy} />
-      <ViewBot
-        doc={viewBot}
-        setDoc={setViewBot}
-        removeViewBot={removeViewBot}
-        enlistBot={enlistBot}
+    <div className="App">
+      <SortBar sortBots={sortBots} />
+
+      <BotArmy
+        army={army}
+        handleReleaseFromArmy={handleReleaseFromArmy}
+        deleteBot={deleteBot}
       />
-      <BotCollection bots={bots} handleAddViewBot={handleAddViewBot} />
+      <h1 className="app-head">Bot Army</h1>
+      <Routes>
+        <Route path="/" element={<Botcollection bots={bots} />} />
+        <Route
+          path="/bots/:id"
+          element={<BotDetails bots={bots} handleAddToArmy={handleAddToArmy} />}
+        />
+      </Routes>
     </div>
-    // <Router>
-    //     <Routes>
-    //         <Route path='/' element={<Layout />} >
-    //             <Route element={<ViewBot doc={viewBot} setDoc={setViewBot} />} />
-    //             <Route index element={<BotCollection bots={bots} handleAddViewBot={handleAddViewBot}  />} />
-    //         </Route>
-    //     </Routes>
-    // </Router>
   );
 }
 
